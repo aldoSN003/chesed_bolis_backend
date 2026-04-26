@@ -53,13 +53,38 @@ router.get('/', async (req, res) => {
                     totalPages: Math.ceil(totalCount / limitPerPage)
                 }
             }
-
         )
 
 
     } catch (e) {
         console.log(`GET /productos error: ${e}`);
         res.status(500).send("Error al obtener los productos");
+    }
+})
+//productos (sabor, contenido_ml, tipo, precio_venta, costo_produccion_actual)
+//('Oreo', 300, 'leche', 23, 11.53),
+router.post('/', async (req, res) => {
+    try {
+        const {sabor, contenido_ml, tipo, precio_venta, costo_produccion_actual} = req.body;
+        const [createdProduct] = await db
+            .insert(productos)
+            .values({sabor, contenido_ml, tipo, precio_venta, costo_produccion_actual})
+            .returning({
+                id: productos.id,
+                public_id: productos.publicId,
+                sabor: productos.sabor,
+                tipo: productos.tipo,
+                precio_venta: productos.precio_venta,
+                costo_produccion_actual: productos.costo_produccion_actual
+            });
+
+        if (!createdProduct) throw Error;
+
+        res.status(201).json({data: createdProduct});
+
+    } catch (e) {
+        console.log(`POST /productos error: ${e}`);
+        res.status(500).send("Error al crear el producto");
     }
 })
 
