@@ -4,8 +4,8 @@ import {lotesProduccion, productos} from "../db/schema";
 import {db} from "../db";
 
 const router = express.Router();
-router.get('/',async (req, res) => {
-    const {search,tipo, date,startDate,endDate, page = 1, limit = 10} = req.query;
+router.get('/', async (req, res) => {
+    const {search, tipo, date, startDate, endDate, page = 1, limit = 10} = req.query;
     const currentPage = Math.max(1, parseInt(String(page), 10) || 1);
     const limitPerPage = Math.min(Math.max(1, parseInt(String(limit), 10) || 10), 100); //max 100 records per page
     const offset = (currentPage - 1) * limitPerPage;
@@ -16,14 +16,14 @@ router.get('/',async (req, res) => {
         filterConditions.push(ilike(productos.sabor, `%${search}%`));
     }
 
-    if(tipo){
+    if (tipo) {
         const tipoPattern = `%${String(tipo).replace(/[%_]/g, '\\$&')}%`;
         filterConditions.push(ilike(productos.tipo, tipoPattern));
     }
 
     // Single date (today or user-picked date): ?date=2025-04-21
-    if(date){
-        filterConditions.push(eq(lotesProduccion.fechaProduccion,String(date)));
+    if (date) {
+        filterConditions.push(eq(lotesProduccion.fechaProduccion, String(date)));
     }
 
     // Date range: ?startDate=2025-04-01&endDate=2025-04-21
@@ -40,7 +40,7 @@ router.get('/',async (req, res) => {
 
     const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
     const countResult = await db
-        .select({ count: sql<number>`count(*)` })
+        .select({count: sql<number>`count(*)`})
         .from(lotesProduccion)
         .innerJoin(productos, eq(productos.id, lotesProduccion.productoId))
         .where(whereClause);
@@ -50,13 +50,13 @@ router.get('/',async (req, res) => {
     const lotesList = await db
         .select({
             ...getTableColumns(lotesProduccion),
-      producto:{
-                productoId:productos.id,
-          sabor:productos.sabor,
-          tipo:productos.tipo,
+            producto: {
+                productoId: productos.id,
+                sabor: productos.sabor,
+                tipo: productos.tipo,
 
 
-      }
+            }
         })
         .from(lotesProduccion)
         .innerJoin(productos, eq(productos.id, lotesProduccion.productoId))
@@ -64,7 +64,6 @@ router.get('/',async (req, res) => {
         .orderBy(asc(lotesProduccion.fechaProduccion))
         .limit(limitPerPage)
         .offset(offset);
-
 
 
     res.status(200).json({

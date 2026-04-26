@@ -27,30 +27,30 @@ export const productos = pgTable(
             .notNull()
             .default(sql`gen_random_uuid()`),
         sabor: varchar("sabor", { length: 100 }).notNull(),
-        contenidoMl: integer("contenido_ml").notNull(),
+        contenido_ml: integer("contenido_ml").notNull(),
         tipo: varchar("tipo", { length: 20 }).notNull(),
-        precioVenta: numeric("precio_venta", { precision: 10, scale: 2 }).notNull(),
-        costoProduccionActual: numeric("costo_produccion_actual", {
+        precio_venta: numeric("precio_venta", { precision: 10, scale: 2 }).notNull(),
+        costo_produccion_actual: numeric("costo_produccion_actual", {
             precision: 10,
             scale: 2,
         })
             .notNull()
             .default("0"),
         activo: boolean("activo").notNull().default(true),
-        creadoEn: timestamp("creado_en", { mode: "date" })
+        creado_en: timestamp("creado_en", { mode: "date" })
             .notNull()
             .default(sql`CURRENT_TIMESTAMP`),
-        actualizadoEn: timestamp("actualizado_en", { mode: "date" })
+        actualizado_en: timestamp("actualizado_en", { mode: "date" })
             .notNull()
             .default(sql`CURRENT_TIMESTAMP`),
     },
     (t) => [
-        check("productos_contenido_ml_check", sql`${t.contenidoMl} > 0`),
+        check("productos_contenido_ml_check", sql`${t.contenido_ml} > 0`),
         check("productos_tipo_check", sql`${t.tipo} IN ('leche', 'agua')`),
-        check("productos_precio_venta_check", sql`${t.precioVenta} >= 0`),
+        check("productos_precio_venta_check", sql`${t.precio_venta} >= 0`),
         check(
             "productos_costo_produccion_actual_check",
-            sql`${t.costoProduccionActual} >= 0`
+            sql`${t.costo_produccion_actual} >= 0`
         ),
     ]
 );
