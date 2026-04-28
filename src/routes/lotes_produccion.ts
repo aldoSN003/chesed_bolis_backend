@@ -1,6 +1,6 @@
 import express from "express";
 import {and, asc, between, eq, getTableColumns, gte, ilike, lte, sql} from "drizzle-orm";
-import {lotesProduccion, productos} from "../db/schema";
+import {lotesProduccion, productos, inventario} from "../db/schema";
 import {db} from "../db";
 
 const router = express.Router();
@@ -77,5 +77,67 @@ router.get('/', async (req, res) => {
     });
 
 })
+
+router.post('/', async (req, res) => {
+    try {
+        const { productoPublicId, fechaProduccion, cantidadProducida, costoProduccion } = req.body;
+
+        if (!productoPublicId || !fechaProduccion || !cantidadProducida || !costoProduccion) {
+            return res.status(400).json({ message: "Faltan campos obligatorios" });
+        }
+
+        const result = await db.transaction(async (tx) => {
+            // 1. Verificar si el producto existe por su publicId
+            const [producto] = await tx
+                .select({ id: productos.id })
+                .from(productos)
+                .where(eq(productos.publicId, productoPublicId));
+
+            if (!producto) {
+                throw new Error("Producto no encontrado");
+            }
+
+            const internalProductoId = producto.id;
+
+            // 2. Insertar el nuevo lote de producción
+            const [nuevoLote] = await tx
+                .insert(lotesProduccion)
+                .values({
+                    productoId: internalProductoId,
+                    fechaProduccion: fechaProduccion,
+                    cantidadProducida: cantidadProducida,
+                    costoProduccion: costoProduccion,
+                })
+                .returning();
+
+            // 3. Actualizar o insertar en el inventario (Upsert)
+            await tx
+                .insert(inventario)
+                .values({
+                    productoId: internalProductoId,
+                    cantidad: cantidadProducida,
+                    actualizadoEn: new Date(),
+                })
+                .onConflictDoUpdate({
+                    target: inventario.productoId,
+                    set: {
+                        cantidad: sql`${inventario.cantidad} + ${cantidadProducida}`,
+                        actualizadoEn: new Date(),
+                    },
+                });
+
+            return nuevoLote;
+        });
+
+        res.status(201).json({ data: result });
+
+    } catch (e: any) {
+        console.error(`POST /lotes_produccion error: ${e}`);
+        if (e.message === "Producto no encontrado") {
+            return res.status(404).json({ message: e.message });
+        }
+        res.status(500).send("Error al crear el lote de producción");
+    }
+});
 
 export default router;
